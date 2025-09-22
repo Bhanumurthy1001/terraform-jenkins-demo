@@ -1,47 +1,55 @@
 pipeline {
     agent any
 
-    environment {
-        AWS_DEFAULT_REGION = "us-east-1"
-    }
-
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Bhanumurthy1001/terraform-jenkins-demo.git'
+                git branch: 'main', url: 'https://github.com/Bhanumurthy1001/terraform-jenkins-demo.git'
             }
         }
 
         stage('Init') {
             steps {
-                sh 'terraform init'
+                withCredentials([
+                    string(credentialsId: 'aws-access', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh 'terraform init'
+                }
             }
         }
 
         stage('Validate') {
             steps {
-                sh 'terraform validate'
+                withCredentials([
+                    string(credentialsId: 'aws-access', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh 'terraform validate'
+                }
             }
         }
 
         stage('Plan') {
             steps {
-                sh 'terraform plan -out=tfplan'
+                withCredentials([
+                    string(credentialsId: 'aws-access', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh 'terraform plan -out=tfplan'
+                }
             }
         }
 
         stage('Apply') {
             steps {
-                input message: "Approve Terraform Apply?"
-                sh 'terraform apply -auto-approve tfplan'
+                withCredentials([
+                    string(credentialsId: 'aws-access', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
             }
-        }
-    }
-
-    post {
-        always {
-            archiveArtifacts artifacts: '**/terraform.tfstate', fingerprint: true
         }
     }
 }
