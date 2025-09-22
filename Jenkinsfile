@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+        AWS_DEFAULT_REGION    = "us-east-1"
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -10,46 +16,43 @@ pipeline {
 
         stage('Init') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'aws-access', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    sh 'terraform init'
-                }
+                sh 'terraform init'
             }
         }
 
         stage('Validate') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'aws-access', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    sh 'terraform validate'
-                }
+                sh 'terraform validate'
             }
         }
 
         stage('Plan') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'aws-access', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    sh 'terraform plan -out=tfplan'
-                }
+                sh 'terraform plan -out=tfplan'
             }
         }
 
         stage('Apply') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'aws-access', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    sh 'terraform apply -auto-approve tfplan'
-                }
+                sh 'terraform apply -auto-approve tfplan'
             }
         }
+
+        stage('Destroy') {
+            when {
+                expression { return params.DESTROY == true }
+            }
+            steps {
+                sh 'terraform destroy -auto-approve'
+            }
+        }
+    }
+
+    parameters {
+        booleanParam(
+            defaultValue: false,
+            description: 'Check this to destroy infra instead of apply',
+            name: 'DESTROY'
+        )
     }
 }
